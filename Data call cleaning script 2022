@@ -1,0 +1,89 @@
+
+
+### 2022 Data Call initial script 
+
+# Adam Delargy 
+# 13/09/2022 
+
+
+
+# load 2021 data and previously cleaned data from other years 
+
+setwd("C:/Users/adelargy/OneDrive - University of Massachusetts Dartmouth/ICES WG/Data call 2022")
+
+dat21 <- read.csv("data 2021 combined.csv", header=TRUE)
+
+datold <- read.table("data all to 2020.txt", header=TRUE)
+
+areas <- read.csv("ICES Rectangles & Areas.csv",header=TRUE)
+
+
+#### inspect data 
+
+table(dat21$Country)
+table(dat21$Year)
+table(dat21$Month,dat21$Country)
+unique(dat21$ICES.Statistical.rectangle)
+# got blanks, UNK, 2.9E, ' 
+
+table(dat21$Metier.level.5,dat21$Country)
+
+table(dat21$Species.code,dat21$Country)
+# Denmark have used SCX again
+
+barplot(tapply(dat21$Landings,dat21$Country,sum,na.rm=TRUE))
+
+barplot(tapply(dat21$Effort,dat21$Country,sum,na.rm=TRUE))
+
+barplot(tapply(dat21$Landings,dat21$Country,sum,na.rm=TRUE)/tapply(dat21$Effort,dat21$Country,sum,na.rm=TRUE))
+
+####
+
+
+###### first work with 2021 data to apply the same cleans that have
+# already been made to previous data 
+
+# problems exist with ICES rectangle names 
+#, ', '42E7
+
+# fix these 
+dat21$ICES.Statistical.rectangle <- ifelse(dat21$ICES.Statistical.rectangle=="'",NA,dat21$ICES.Statistical.rectangle) 
+dat21$ICES.Statistical.rectangle <- ifelse(substr(dat21$ICES.Statistical.rectangle,1,1)=="'",substr(dat21$ICES.Statistical.rectangle,2,10),dat21$ICES.Statistical.rectangle) 
+
+# some statistical rectangles in E&W appears in numerical format 
+dat21$ICES.Statistical.rectangle <- ifelse(substr(dat21$ICES.Statistical.rectangle,5,5)=="E",paste0(substr(dat21$ICES.Statistical.rectangle,1,1),substr(dat21$ICES.Statistical.rectangle,3,3),"E",as.numeric(substr(dat21$ICES.Statistical.rectangle,7,8))-1),dat21$ICES.Statistical.rectangle)
+
+### change country names 
+
+dat21$Country <- as.factor(dat21$Country)
+
+levels(dat21$Country) <- c("Belgium","Denmark","England and Wales","France","Scotland","Channel Islands","Isle of Man","Northern Ireland","Ireland","Netherlands")
+
+
+
+
+###### next step is to get the same column names in both dfs
+
+dat21$Country <- as.character(dat21$Country)
+dat21$ICES.Statistical.rectangle <- as.character(dat21$ICES.Statistical.rectangle)
+
+### classify 2021 in to ICES areas 
+
+m1 <- match(dat21$ICES.Statistical.rectangle,areas$Rectangle)
+dat21$icesarea <- factor(NA, levels=unique(areas$ICES.Area))
+
+for(i in 1:nrow(dat21)){
+	dat21$icesarea[i] <- areas$ICES.Area[m1[i]]
+}
+
+dat21$icesarea <- as.character(dat21$icesarea)
+
+datf <- data.frame(Country=c(datold$Country,dat21$Country),Year=c(datold$Year,dat21$Year),Month=c(datold$Month,dat21$Month),ICES.area=c(rep(NA,nrow(datold)),dat21$ICES.area),Statistical.rectangle=c(datold$Statistical.rectangle,dat21$ICES.Statistical.rectangle),Metier=c(datold$Metier,dat21$Metier.level.5),Species.code=c(datold$Species.code,dat21$Species.code),Landings=c(datold$Landings,dat21$Landings),Effort=c(datold$Effort,dat21$Effort),icesarea=c(datold$icesarea,dat21$icesarea))
+
+### WRITE
+
+write.table(datf,"data all to 2021.txt",row.names=FALSE)
+
+###
+
+
